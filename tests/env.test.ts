@@ -9,10 +9,9 @@ describe('env', () => {
             PASSWORD: "123",
             BOOL: "true",
             TIMEOUT: "1000",
-            PORT: 8080
+            PORT: 8080,
+            AAA: "0"
         })
-
-        type Constructor = new (...args: any[]) => any
 
         type RequiresType<T> = {
             [P in keyof T]
@@ -33,7 +32,7 @@ describe('env', () => {
             : never
         }
 
-        function Requires<Variable extends { [key: string]: Constructor | String | Boolean | Number | readonly (string | number | boolean | Constructor | String | Boolean | Number)[] }>(variable: Variable, validator?: (variable: RequiresType<Variable>) => boolean) {
+        function Requires<Variable extends { [key: string]: StringConstructor | BooleanConstructor | NumberConstructor | readonly (string | number | boolean | StringConstructor | BooleanConstructor | NumberConstructor)[] }>(variable: Variable, validator?: (variable: RequiresType<Variable>) => boolean) {
             const output = Object.keys(variable).reduce((a, c) => ({ ...a, [c]: process.env[c] }), {}) as RequiresType<Variable>
             if (validator) {
                 const valid = validator(output)
@@ -46,20 +45,20 @@ describe('env', () => {
                         if (type === String) {
                             const ok = value === String(value) // ?
                             if (!ok) {
-                                throw new Error(`Could not safely convert required value ${key} from ${value || "<empty>"} to String type.`)
+                                throw new Error(`Could not safely convert required value ${key} from ${value || "<empty>"} to String.`)
                             }
                             return value
                         } else if (type === Boolean) {
                             const isTrue = ["yes", "true", "on", "y", "1"].indexOf(value?.toLowerCase()) >= 0
                             const isFalse = ["no", "false", "off", "n", "0"].indexOf(value?.toLowerCase()) >= 0
                             if (!isTrue && !isFalse) {
-                                throw new Error(`Could not safely convert required value ${key} from ${value || "<empty>"} to Boolean type.`)
+                                throw new Error(`Could not safely convert required value ${key} from ${value || "<empty>"} to Boolean.`)
                             }
                             return isTrue
                         } else if (type === Number) {
                             const ok = !isNaN(parseFloat(value as string | undefined))
                             if (!ok) {
-                                throw new Error(`Could not safely convert require value ${key} from ${value || "<empty>"} to Number type.`)
+                                throw new Error(`Could not safely convert required value ${key} from ${value || "<empty>"} to Number.`)
                             }
                             return parseFloat(value as string)
                         } else {
@@ -127,6 +126,9 @@ describe('env', () => {
                 BOOL: Boolean,
                 PORT: [8080, 8030] as const,
                 DEBUG: [String, false] as const
+            }),
+            Requires({
+                AAA: Number
             })
         )
 
@@ -142,7 +144,8 @@ describe('env', () => {
             PORT: 8080,
             USERNAME: "",
             TIMEOUT: 8,
-            BOOL: true
+            BOOL: true,
+            AAA: 1
         }
 
         b // ?
@@ -153,15 +156,16 @@ describe('env', () => {
             }
         }
 
-        
+
         new Foo({
             BOOL: true,
             DEBUG: false,
             HOSTNAME: "",
-            PASSWORD:"",
+            PASSWORD: "",
             PORT: 8080,
             TIMEOUT: 9,
-            USERNAME: ""
+            USERNAME: "",
+            AAA: 1
         })
 
     })
