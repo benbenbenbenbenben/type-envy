@@ -1,7 +1,12 @@
 
 
-export const Url = "Url" as const
-export const IpAddress = "IpAddress" as const
+export const Url = Symbol("Url")
+export const IpAddress = Symbol("IpAddress")
+export const Nothing = Symbol("Nothing")
+
+export function Optional<T>(pattern: T): T | null {
+    return pattern as T | null
+}
 
 export type RequiresType<T> = {
     [P in keyof T]
@@ -15,6 +20,8 @@ export type RequiresType<T> = {
         ? boolean
         : U extends NumberConstructor
         ? number
+        : U extends Symbol
+        ? U
         : U
     )
     : T[P] extends typeof Url
@@ -23,8 +30,9 @@ export type RequiresType<T> = {
     ? `${number}.${number}.${number}.${number}`
     : never
 }
+export type VariableTemplate = { [key: string]: typeof Url | typeof IpAddress | StringConstructor | BooleanConstructor | NumberConstructor | readonly (typeof Nothing | string | number | boolean | StringConstructor | BooleanConstructor | NumberConstructor)[] }
 
-export function Requires<Variable extends { [key: string]: "Url" | "IpAddress" | StringConstructor | BooleanConstructor | NumberConstructor | readonly (string | number | boolean | StringConstructor | BooleanConstructor | NumberConstructor)[] }>(variable: Variable, validator?: (variable: RequiresType<Variable>) => boolean) {
+export function Requires<Variable extends VariableTemplate>(variable: Variable, validator?: (variable: RequiresType<Variable>) => boolean) {
     const output = Object.keys(variable).reduce((a, c) => ({ ...a, [c]: process.env[c] }), {}) as RequiresType<Variable>
     if (validator) {
         const valid = validator(output)
@@ -66,13 +74,24 @@ export function Requires<Variable extends { [key: string]: "Url" | "IpAddress" |
                         throw new Error(`Could not safely convert required value ${key} from ${value || "<empty>"} to IpAddress.`)
                     }
                     return value.toString()
+                } else if (type === Nothing) {
+                    [type, value] // ?
+                    if (value) {
+                        throw new Error(Nothing.toString())
+                    }
+                    return Nothing
                 } else {
+                    [type, value] // ?
                     if (typeof type === "string" || typeof type === "boolean" || typeof type === "number") {
                         const ok = type.toString() === value.toString()
                         if (!ok) {
                             throw new Error(`Could not safely convert required value ${key} from ${value || "<empty>"} to ${type}`)
                         }
-                        return value
+                        return validatePrimitive(key, value, {
+                            string: String,
+                            boolean: Boolean,
+                            number: Number
+                        }[typeof type])
                     }
                 }
             }
@@ -89,7 +108,7 @@ export function Requires<Variable extends { [key: string]: "Url" | "IpAddress" |
                 if (ok.find(e => !(e instanceof Error))) {
                     (output as any)[key] = ok.find(e => !(e instanceof Error))
                 } else {
-                    const firstError = ok.find(e => e instanceof Error) as Error | undefined
+                    const firstError = ok.find(e => e instanceof Error && e.message !== Nothing.toString()) as Error | undefined
                     if (firstError) {
                         throw firstError
                     }
@@ -101,4 +120,19 @@ export function Requires<Variable extends { [key: string]: "Url" | "IpAddress" |
         })
     }
     return output
+}
+
+
+export interface TypeEnvyTypes {
+    IpAddress: typeof IpAddress
+    Url: typeof Url
+    Nothing: typeof Nothing
+}
+
+export function TypeEnvy<T extends VariableTemplate>(types: (types: TypeEnvyTypes) => T): RequiresType<T> {
+    return Requires(types({
+        IpAddress,
+        Url,
+        Nothing,
+    }))
 }
