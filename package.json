@@ -1,6 +1,6 @@
 {
   "name": "type-envy",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "author": "Ben Babik <work@benjaminbabik.com>",
