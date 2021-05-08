@@ -1,19 +1,19 @@
 {
   "name": "type-envy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "author": "Ben Babik <work@benjaminbabik.com>",
   "license": "MIT",
   "scripts": {
     "test": "cross-env DEBUG=fake jest",
-    "lint": "eslint index.ts --quiet --fix",
-    "prepublishOnly": "yarn tsc"
+    "lint": "eslint src/index.ts --quiet --fix",
+    "prepublishOnly": "yarn lint && yarn tsc && yarn test"
   },
   "dependencies": {},
   "devDependencies": {
     "@types/jest": "^26.0.23",
-    "@types/node": "^15.0.1",
+    "@types/node": "^15.0.2",
     "@typescript-eslint/eslint-plugin": "^4.22.1",
     "@typescript-eslint/parser": "^4.22.1",
     "cross-env": "^7.0.3",
