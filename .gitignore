@@ -1,1 +1,5 @@
 node_modules 
+*.js
+!.prettierrc.js
+!.eslintrc.js
+*.d.ts
