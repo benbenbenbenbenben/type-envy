@@ -1,4 +1,2 @@
-tests
-jest.config.js
-env.ts
-.env
+*
+!dist

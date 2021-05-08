@@ -4,7 +4,7 @@ export const Nothing = Symbol.for('Nothing');
 export type IpAddressMask = `${number}.${number}.${number}.${number}`;
 
 export type VariablesType<T> = {
-    [P in keyof T]: T[P] extends (...args: any) => infer A
+    [P in keyof T]: T[P] extends (...args: unknown[]) => infer A
         ? A
         : T[P] extends readonly (infer U)[]
         ? U extends StringConstructor
@@ -23,12 +23,9 @@ export type VariablesType<T> = {
         : never;
 };
 
-type Map<T> = {
-    get: <T>() => T;
-};
 export type VariableTemplate = {
     [key: string]:
-        | ((value: string) => any)
+        | ((value: string) => unknown[])
         | typeof Url
         | typeof IpAddress
         | StringConstructor
@@ -59,7 +56,8 @@ function Requires<Variable extends VariableTemplate>(
             throw new Error('Invalid Environment Variables');
         }
     } else {
-        Object.keys(variable).forEach((key, i) => {
+        Object.keys(variable).forEach((key) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const validatePrimitive = (key: string, value: any, type: any): unknown => {
                 if (type === String) {
                     const ok = value === String(value); // ?
@@ -155,6 +153,7 @@ function Requires<Variable extends VariableTemplate>(
                     }
                 });
                 if (ok.find((e) => !(e instanceof Error))) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (output as any)[key] = ok.find((e) => !(e instanceof Error));
                 } else {
                     const firstError = ok.find((e) => e instanceof Error && e.message !== Nothing.toString()) as
@@ -165,6 +164,7 @@ function Requires<Variable extends VariableTemplate>(
                     }
                 }
             } else {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (output as any)[key] = validatePrimitive(key, realValue, keyType);
             }
         });
@@ -185,8 +185,4 @@ export function TypeEnvy<T extends VariableTemplate>(types: (types: TypeEnvyType
             Nothing,
         }),
     );
-}
-
-export function TypeEnvyLoad<T extends VariablesType<V>, V extends VariableTemplate>(variableType: V) {
-    return TypeEnvy((types) => variableType);
 }

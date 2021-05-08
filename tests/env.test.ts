@@ -1,4 +1,4 @@
-import { Nothing, TypeEnvy } from "../index"
+import { Nothing, TypeEnvy } from ".."
 import { SomeDumbTypeWithTypeEnvy } from "./TypeWithoutTypeEnvy"
 import { TypeWithTypeEnvy } from "./TypeWithTypeEnvy"
 

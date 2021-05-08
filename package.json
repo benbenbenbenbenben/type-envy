@@ -7,8 +7,9 @@
   "license": "MIT",
   "scripts": {
     "test": "cross-env DEBUG=fake jest",
-    "lint": "eslint src/index.ts --quiet --fix",
-    "prepublishOnly": "yarn lint && yarn tsc && yarn test"
+    "lint": "eslint index.ts --quiet --fix",
+    "build": "yarn tsc --build tsconfig.json",
+    "prepublishOnly": "yarn lint && yarn build && yarn test"
   },
   "dependencies": {},
   "devDependencies": {
