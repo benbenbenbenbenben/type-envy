@@ -1,11 +1,21 @@
+import { URL } from 'url';
+
 export const Url = Symbol.for('Url');
 export const IpAddress = Symbol.for('IpAddress');
 export const Nothing = Symbol.for('Nothing');
 export type IpAddressMask = `${number}.${number}.${number}.${number}`;
 
+export interface TypeEnvyArgument {
+    key: string;
+    keyExists: boolean;
+    value?: string;
+    error?: (error: string | Error) => void;
+    warn?: (warning: string | Error) => void;
+}
+
 export type VariablesType<T> = {
-    [P in keyof T]: T[P] extends (...args: unknown[]) => infer A
-        ? A
+    [P in keyof T]: T[P] extends (arg: TypeEnvyArgument) => infer R
+        ? R
         : T[P] extends readonly (infer U)[]
         ? U extends StringConstructor
             ? string
@@ -15,6 +25,8 @@ export type VariablesType<T> = {
             ? number
             : U extends symbol
             ? U
+            : U extends typeof Nothing
+            ? typeof Nothing
             : U
         : T[P] extends typeof Url
         ? URL
@@ -23,33 +35,37 @@ export type VariablesType<T> = {
         : never;
 };
 
-export type VariableTemplate = {
-    [key: string]:
-        | ((value: string) => unknown[])
-        | typeof Url
-        | typeof IpAddress
-        | StringConstructor
-        | BooleanConstructor
-        | NumberConstructor
-        | readonly (
-              | typeof Nothing
+/*  eslint-disable @typescript-eslint/no-explicit-any */
+export type VariableTemplate =
+    | {
+          [key: string]:
+              | ((arg: TypeEnvyArgument) => any)
+              | typeof Url
+              | typeof IpAddress
               | string
-              | number
-              | boolean
               | StringConstructor
               | BooleanConstructor
               | NumberConstructor
-          )[];
-};
+              | readonly (
+                    | typeof Nothing
+                    | string
+                    | number
+                    | boolean
+                    | StringConstructor
+                    | BooleanConstructor
+                    | NumberConstructor
+                    | undefined
+                )[]
+              | never;
+      }
+    | never;
 
-function Requires<Variable extends VariableTemplate>(
+function Requires<I extends Record<string, unknown>, Variable extends VariableTemplate>(
+    input: I,
     variable: Variable,
     validator?: (variable: VariablesType<Variable>) => boolean,
 ) {
-    const output = Object.keys(variable).reduce(
-        (a, c) => ({ ...a, [c]: process.env[c] }),
-        {},
-    ) as VariablesType<Variable>;
+    const output = Object.keys(variable).reduce((a, c) => ({ ...a, [c]: input[c] }), {}) as VariablesType<Variable>;
     if (validator) {
         const valid = validator(output);
         if (!valid) {
@@ -109,6 +125,12 @@ function Requires<Variable extends VariableTemplate>(
                         throw new Error(Nothing.toString());
                     }
                     return Nothing;
+                } else if (type === undefined) {
+                    [type, value]; // ?
+                    if (value) {
+                        throw new Error('undefined');
+                    }
+                    return undefined;
                 } else if (typeof type === 'function') {
                     try {
                         const ok = type(value);
@@ -117,7 +139,6 @@ function Requires<Variable extends VariableTemplate>(
                         throw new Error(e instanceof Error ? e.message : e.toString());
                     }
                 } else {
-                    [type, value]; // ?
                     if (typeof type === 'string' || typeof type === 'boolean' || typeof type === 'number') {
                         const ok = type.toString() === value?.toString();
                         if (!ok) {
@@ -156,9 +177,9 @@ function Requires<Variable extends VariableTemplate>(
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (output as any)[key] = ok.find((e) => !(e instanceof Error));
                 } else {
-                    const firstError = ok.find((e) => e instanceof Error && e.message !== Nothing.toString()) as
-                        | Error
-                        | undefined;
+                    const firstError = ok.find(
+                        (e) => e instanceof Error && e.message !== Nothing.toString() && e.message !== 'undefined',
+                    );
                     if (firstError) {
                         throw firstError;
                     }
@@ -177,12 +198,23 @@ interface TypeEnvyTypes {
     Nothing: typeof Nothing;
 }
 
-export function TypeEnvy<T extends VariableTemplate>(types: (types: TypeEnvyTypes) => T): VariablesType<T> {
-    return Requires(
-        types({
-            IpAddress,
-            Url,
-            Nothing,
-        }),
-    );
+export function TypeEnvy<R extends VariableTemplate>(types: (types: TypeEnvyTypes) => R): VariablesType<R> {
+    return fromAny(process.env).toType(types);
+}
+
+export function fromAny<T extends Record<string, unknown>>(
+    value: T,
+): { toType: <R extends VariableTemplate>(types: (types: TypeEnvyTypes) => R) => VariablesType<R> } {
+    return {
+        toType: <R extends VariableTemplate>(types: (types: TypeEnvyTypes) => R): VariablesType<R> => {
+            return Requires(
+                value,
+                types({
+                    IpAddress,
+                    Url,
+                    Nothing,
+                }),
+            );
+        },
+    };
 }
