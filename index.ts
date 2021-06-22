@@ -133,7 +133,12 @@ function Requires<I extends Record<string, unknown>, Variable extends VariableTe
                     return undefined;
                 } else if (typeof type === 'function') {
                     try {
-                        const ok = type(value);
+                        const ok = (type as (x: TypeEnvyArgument) => boolean)({
+                            key: key,
+                            keyExists: value !== undefined,
+                            value: value,
+                            // TODO: error/warning callback
+                        });
                         return ok;
                     } catch (e) {
                         throw new Error(e instanceof Error ? e.message : e.toString());
