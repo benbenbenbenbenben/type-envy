@@ -11,6 +11,7 @@ export interface TypeEnvyArgument {
     value?: string;
     error?: (error: string | Error) => void;
     warn?: (warning: string | Error) => void;
+    toString: () => string;
 }
 
 export type VariablesType<T> = {
@@ -137,6 +138,7 @@ function Requires<I extends Record<string, unknown>, Variable extends VariableTe
                             key: key,
                             keyExists: value !== undefined,
                             value: value,
+                            toString: (): string => (value ? value : 'undefined').toString(),
                             // TODO: error/warning callback
                         });
                         return ok;
