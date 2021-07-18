@@ -1,4 +1,5 @@
 import { URL } from 'url';
+import { isFunction } from 'util';
 
 export const Url = Symbol.for('Url');
 export const IpAddress = Symbol.for('IpAddress');
@@ -205,22 +206,24 @@ interface TypeEnvyTypes {
     Nothing: typeof Nothing;
 }
 
-export function TypeEnvy<R extends VariableTemplate>(types: (types: TypeEnvyTypes) => R): VariablesType<R> {
+export function TypeEnvy<R extends VariableTemplate>(types: ((types: TypeEnvyTypes) => R) | R): VariablesType<R> {
     return fromAny(process.env).toType(types);
 }
 
 export function fromAny<T extends Record<string, unknown>>(
     value: T,
-): { toType: <R extends VariableTemplate>(types: (types: TypeEnvyTypes) => R) => VariablesType<R> } {
+): { toType: <R extends VariableTemplate>(types: ((types: TypeEnvyTypes) => R) | R) => VariablesType<R> } {
     return {
-        toType: <R extends VariableTemplate>(types: (types: TypeEnvyTypes) => R): VariablesType<R> => {
+        toType: <R extends VariableTemplate>(types: ((types: TypeEnvyTypes) => R) | R): VariablesType<R> => {
             return Requires(
                 value,
-                types({
-                    IpAddress,
-                    Url,
-                    Nothing,
-                }),
+                typeof types === 'function'
+                    ? types({
+                          IpAddress,
+                          Url,
+                          Nothing,
+                      })
+                    : types,
             );
         },
     };
