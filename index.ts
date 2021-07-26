@@ -62,12 +62,19 @@ export type VariableTemplate =
       }
     | never;
 
+function toUnderscored(s: string): string {
+    return s.includes('_') ? s : s === s.toUpperCase() ? s : s.replace(/(.)([A-Z]+)/g, '$1_$2').toUpperCase();
+}
+
 function Requires<I extends Record<string, unknown>, Variable extends VariableTemplate>(
     input: I,
     variable: Variable,
     validator?: (variable: VariablesType<Variable>) => boolean,
 ) {
-    const output = Object.keys(variable).reduce((a, c) => ({ ...a, [c]: input[c] }), {}) as VariablesType<Variable>;
+    const output = Object.keys(variable).reduce(
+        (a, c) => ({ ...a, [c]: input[c] || input[toUnderscored(c)] }),
+        {},
+    ) as VariablesType<Variable>;
     if (validator) {
         const valid = validator(output);
         if (!valid) {
