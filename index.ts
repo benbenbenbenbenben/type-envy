@@ -1,5 +1,4 @@
 import { URL } from 'url';
-import { isFunction } from 'util';
 
 export const Url = Symbol.for('Url');
 export const IpAddress = Symbol.for('IpAddress');
@@ -151,7 +150,7 @@ function Requires<I extends Record<string, unknown>, Variable extends VariableTe
                         });
                         return ok;
                     } catch (e) {
-                        throw new Error(e instanceof Error ? e.message : e.toString());
+                        throw new Error(e instanceof Error ? e.message : (e as { toString: () => string }).toString());
                     }
                 } else {
                     if (typeof type === 'string' || typeof type === 'boolean' || typeof type === 'number') {
@@ -235,3 +234,29 @@ export function fromAny<T extends Record<string, unknown>>(
         },
     };
 }
+
+export const Common = {
+    not: (f: (...args: any[]) => boolean) => (x: any) => !f(x),
+    StringOr: (s: string) => (x: TypeEnvyArgument) => x.value || s,
+    StringOrError: (err: string) => (x: TypeEnvyArgument) => {
+        if (x.value) {
+            return x.value;
+        } else {
+            throw {
+                name: x.key,
+                error: err,
+            };
+        }
+    },
+    NumberOr: (s: number) => (x: TypeEnvyArgument) => [Number(x.value), s].find(Common.not(isNaN))!,
+    TrueOr: (s: boolean) => (x: TypeEnvyArgument) =>
+        x.value ? ['1', 'yes', 'true', 'on'].includes(x.value.toLowerCase()) : s,
+    FalseOr: (s: boolean) => (x: TypeEnvyArgument) =>
+        x.value ? ['0', 'no', 'false', 'off'].includes(x.value.toLowerCase()) : s,
+    ConstantString: (s: string) => (x: TypeEnvyArgument) => {
+        if (x.value && s !== x.value) {
+            throw `"${x.value}" does not equal expected constant "${s}" for ${x.key}`;
+        }
+        return s;
+    },
+};
